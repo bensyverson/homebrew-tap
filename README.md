@@ -12,9 +12,15 @@ brew install bensyverson/tap/woodcase
 
 ## Releasing a new version
 
-1. In Woodcase, set `WoodcaseVersion.current` (`Sources/WoodcaseCommandCore/Verbs/WoodcaseVersion.swift`) to the new version — the formula's test checks `woodcase --version` against it — then tag and push the tag (`git tag v0.2.0 && git push origin v0.2.0`).
-2. Point the formula at it: `brew bump-formula-pr --url https://github.com/bensyverson/woodcase/archive/refs/tags/v0.2.0.tar.gz bensyverson/tap/woodcase`, or edit `url` and `sha256` by hand (`curl -sL <url> | shasum -a 256`).
-3. Check it: `brew install --build-from-source bensyverson/tap/woodcase && brew test woodcase && brew audit --strict woodcase`.
+From a Woodcase checkout beside this one:
+
+```bash
+scripts/release 0.2.0        # bump, test, tag, push, update this formula, check it
+scripts/release              # publish whatever WoodcaseVersion.current already says
+scripts/release --dry-run    # print the plan, change nothing
+```
+
+Each step is skipped when already done, so a release that stopped halfway resumes by running it again. See `scripts/release --help` for the details.
 
 ## License
 
