@@ -1,8 +1,8 @@
 class Woodcase < Formula
   desc "Read, edit, render and generate code from Pen .pen design files"
   homepage "https://github.com/bensyverson/woodcase"
-  url "https://github.com/bensyverson/woodcase/archive/refs/tags/v0.1.2.tar.gz"
-  sha256 "d13ae78d6e962049bcc9b510f1e44a92851370549d472983af3ebb1935350690"
+  url "https://github.com/bensyverson/woodcase/archive/refs/tags/v0.1.3.tar.gz"
+  sha256 "353aa0b27bb0bd6c24c6adcbed0d49f702a7882719d2ad3b97640946621abd8b"
   license "MIT"
   head "https://github.com/bensyverson/woodcase.git", branch: "main"
 
