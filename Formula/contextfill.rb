@@ -9,7 +9,7 @@ class Contextfill < Formula
   depends_on "go" => :build
 
   def install
-    system "go", "build", *std_go_args(ldflags: "-s -w"), "./cmd/contextfill"
+    system "go", "build", *std_go_args, "./cmd/contextfill"
     pkgshare.install "opencode/plugin/contextfill.js"
   end
 
