@@ -223,7 +223,7 @@ if $dry_run; then
     fi
     $formula_done || say "would point ${formula} at ${tag}, with the tarball's sha256, and push the tap"
     if ! $bottle_done; then
-        say "would build a ${bottle_tag} bottle of ${formula_ref}${sign:+, signed by ${sign}}${notary_profile:+ and notarized}"
+        say "would build the ${bottle_tag} bottle of ${formula_ref}${sign:+, signed by ${sign}}${notary_profile:+ and notarized}"
         say "would upload it to ${github_repo}'s ${tag} release and write the formula's bottle block"
     fi
     $verify && say "would install ${formula_ref} through Homebrew, then brew test and brew audit"

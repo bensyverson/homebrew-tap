@@ -452,7 +452,7 @@ case_name="bottle dry run"
 conf_extra="bottle=yes"
 setup 0.1.0
 release 0 0.1.1 --dry-run
-assert_out "would build a ${bottle_tag} bottle"
+assert_out "would build the ${bottle_tag} bottle"
 refute_log "brew"
 refute_log "gh"
 
