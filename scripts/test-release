@@ -52,13 +52,38 @@ while [[ $# -gt 0 ]]; do
 done
 printf 'tarball of %s' "$url" >"$out"
 EOF
+# brew bottle writes a tarball of fixed bytes and the JSON beside it, named for the
+# machine's own tag, not the formula's oldest macOS, which the script retags it to.
 cat >"${stubs}/brew" <<'EOF'
 #!/usr/bin/env bash
 echo "brew $*" >>"$STUB_LOG"
 case "$1" in
     --repository) echo "$STUB_BREW_TAP" ;;
+    --cellar) echo "$STUB_CELLAR" ;;
     list) [[ -n "${STUB_BREW_INSTALLED:-}" ]] ;;
+    bottle)
+        printf 'bottle bytes' >"demo--9.9.9.arm64_hosttag.bottle.tar.gz"
+        printf '{"bensyverson/tap/demo":{"bottle":{"tags":{"arm64_hosttag":{"cellar":"%s"}}}}}' \
+            "${STUB_BOTTLE_CELLAR:-any_skip_relocation}" >"demo--9.9.9.arm64_hosttag.bottle.json"
+        ;;
+    info) printf '{"formulae":[{"installed":[{"poured_from_bottle":%s}]}]}' "${STUB_POURED:-true}" ;;
 esac
+EOF
+# gh release view succeeds only when STUB_GH_RELEASE says the release exists.
+cat >"${stubs}/gh" <<'EOF'
+#!/usr/bin/env bash
+echo "gh $*" >>"$STUB_LOG"
+[[ "$1 $2" != "release view" || -n "${STUB_GH_RELEASE:-}" ]]
+EOF
+cat >"${stubs}/codesign" <<'EOF'
+#!/usr/bin/env bash
+echo "codesign $*" >>"$STUB_LOG"
+[[ "$1" != -dvv ]] || echo "Authority=${STUB_AUTHORITY:-Developer ID Application: Test (TEAM)}" >&2
+EOF
+cat >"${stubs}/xcrun" <<'EOF'
+#!/usr/bin/env bash
+echo "xcrun $*" >>"$STUB_LOG"
+printf '{"id":"sub-1","status":"%s"}\n' "${STUB_NOTARY_STATUS:-Accepted}"
 EOF
 chmod +x "${stubs}"/*
 export PATH="${stubs}:${PATH}"
@@ -101,6 +126,7 @@ name=Demo
 version_file=${version_file}
 version_line=${version_line}
 check=stub-check --all
+${conf_extra:-}
 EOF
     write_version 0.1.0
     git -C "$wc" add -A
@@ -118,7 +144,15 @@ EOF
     git clone -q "${root}/tap.git" "$STUB_BREW_TAP"
     export STUB_LOG="${root}/stub.log"
     : >"$STUB_LOG"
-    unset STUB_CHECK_EXIT STUB_BREW_INSTALLED
+    # Each version's keg holds one real Mach-O, so the script finds something to sign.
+    export STUB_CELLAR="${root}/cellar"
+    for v in 0.1.0 0.1.1 0.2.0; do
+        mkdir -p "${STUB_CELLAR}/${v}/bin"
+        cp /usr/bin/true "${STUB_CELLAR}/${v}/bin/demo"
+        echo "not code" >"${STUB_CELLAR}/${v}/README"
+    done
+    unset STUB_CHECK_EXIT STUB_BREW_INSTALLED STUB_BOTTLE_CELLAR STUB_POURED STUB_GH_RELEASE
+    unset STUB_AUTHORITY STUB_NOTARY_STATUS
 }
 
 write_version() {
@@ -136,6 +170,8 @@ class Demo < Formula
   url "$(tarball "$1")"
   sha256 "$(sha_of "$(tarball "$1")")"
   license "MIT"
+${formula_bottle:-}
+  depends_on macos: :sequoia
 end
 EOF
 }
@@ -168,7 +204,7 @@ assert_released() {
         fail "v${v} does not carry version ${v}"
     remote_formula | grep -qF "url \"$(tarball "$v")\"" || fail "formula url not at ${v}"
     remote_formula | grep -qF "sha256 \"$(sha_of "$(tarball "$v")")\"" || fail "formula sha256 wrong"
-    git -C "${work}/case/tap.git" log -1 --format=%s main | grep -qF "Bumps demo to ${v}" || fail "tap commit subject"
+    git -C "${work}/case/tap.git" log --format=%s main | grep -qF "Bumps demo to ${v}" || fail "tap commit subject"
     [[ -z "$(git -C "$wc" status --porcelain)" ]] || fail "repo left dirty"
     [[ -z "$(git -C "$tap" status --porcelain)" ]] || fail "tap left dirty"
     assert_log "brew install bensyverson/tap/demo"
@@ -356,5 +392,162 @@ release 0 --skip-tests --no-verify
 refute_log "check"
 refute_log "brew"
 remote_formula | grep -qF "v0.1.1.tar.gz" || fail "formula not moved"
+
+# --- Bottles ------------------------------------------------------------------------------
+
+# The bottle is tagged for the formula's oldest macOS, on this machine's architecture.
+bottle_tag="$([[ "$(uname -m)" == arm64 ]] && echo arm64_)sequoia"
+bottle_sha="$(printf 'bottle bytes' | shasum -a 256 | cut -d' ' -f1)"
+bottle_url() { echo "https://github.com/bensyverson/demo/releases/download/v$1"; }
+sign_conf=$'bottle=yes\nsign=Developer ID Application: Test (TEAM)\nnotary_profile=demo-notary'
+
+assert_bottled() {
+    local v="$1"
+    remote_formula | grep -qF "root_url \"$(bottle_url "$v")\"" || fail "formula root_url not at ${v}"
+    remote_formula | grep -qF "sha256 cellar: :any_skip_relocation, ${bottle_tag}: \"${bottle_sha}\"" ||
+        fail "formula lacks the ${bottle_tag} bottle"
+    [[ "$(remote_formula | grep -c 'bottle do')" == 1 ]] || fail "not exactly one bottle block"
+    git -C "${work}/case/tap.git" log -1 --format=%s main | grep -qF "Bottles demo ${v}" || fail "tap commit subject"
+    [[ -z "$(git -C "$tap" status --porcelain)" ]] || fail "tap left dirty"
+    assert_log "brew install --build-bottle bensyverson/tap/demo"
+    assert_log "brew bottle --json --no-rebuild --root-url=$(bottle_url "$v") bensyverson/tap/demo"
+    assert_log "gh release upload v${v} "
+    assert_log "/demo-${v}.${bottle_tag}.bottle.tar.gz --repo bensyverson/demo --clobber"
+    # Checked the way a user gets it: a fresh install, poured from the bottle.
+    assert_log "brew uninstall --formula bensyverson/tap/demo"
+    assert_log "brew info --json=v2 bensyverson/tap/demo"
+    assert_log "brew test bensyverson/tap/demo"
+    assert_log "brew audit --strict bensyverson/tap/demo"
+}
+
+case_name="release.conf: bottle must be yes or no"
+conf_extra="bottle=maybe"
+setup 0.1.0
+release 3
+assert_out "must be yes or no"
+
+case_name="release.conf: sign needs bottle=yes"
+conf_extra="sign=Developer ID Application: Test (TEAM)"
+setup 0.1.0
+release 3
+assert_out "bottle=yes"
+
+case_name="release.conf: notary_profile needs sign"
+conf_extra=$'bottle=yes\nnotary_profile=demo-notary'
+setup 0.1.0
+release 3
+assert_out "sign="
+
+case_name="bottle=yes needs the formula's oldest macOS"
+conf_extra="bottle=yes"
+setup 0.1.0
+sed -i.bak '/depends_on macos/d' "${tap}/Formula/demo.rb"
+rm "${tap}/Formula/demo.rb.bak"
+git -C "$tap" commit -q -am "Drops the macOS floor"
+git -C "$tap" push -q origin main
+release 3
+assert_out "depends_on macos"
+
+case_name="bottle dry run"
+conf_extra="bottle=yes"
+setup 0.1.0
+release 0 0.1.1 --dry-run
+assert_out "would build a ${bottle_tag} bottle"
+refute_log "brew"
+refute_log "gh"
+
+case_name="bottle: full release builds, uploads and pours a bottle"
+conf_extra="bottle=yes"
+setup 0.1.0
+release 0 0.1.1
+assert_released 0.1.1
+assert_bottled 0.1.1
+assert_log "gh release create v0.1.1 --repo bensyverson/demo --verify-tag --title Demo 0.1.1 --generate-notes"
+refute_log "codesign"
+refute_log "xcrun"
+
+case_name="bottle: a released but unbottled version gets bottled"
+conf_extra="bottle=yes"
+setup 0.1.0
+release 0
+assert_out "Building a bottle"
+! grep -qF "already released" "${work}/out" || fail "called an unbottled version released"
+assert_bottled 0.1.0
+
+case_name="bottle: an existing GitHub release is reused"
+conf_extra="bottle=yes"
+setup 0.1.0
+export STUB_GH_RELEASE=1
+release 0
+assert_bottled 0.1.0
+refute_log "gh release create"
+
+case_name="bottle: a bottled release only rechecks"
+conf_extra="bottle=yes"
+setup 0.1.0
+release 0 0.1.1
+: >"$STUB_LOG"
+release 0
+assert_out "already released"
+refute_log "brew bottle"
+refute_log "gh"
+assert_log "brew info --json=v2 bensyverson/tap/demo"
+
+case_name="bottle: the default cellar is left out of the bottle line"
+conf_extra="bottle=yes"
+setup 0.1.0
+default_cellar="$([[ "$(uname -m)" == arm64 ]] && echo /opt/homebrew/Cellar || echo /usr/local/Cellar)"
+export STUB_BOTTLE_CELLAR="$default_cellar"
+release 0
+remote_formula | grep -qF "    sha256 ${bottle_tag}: \"${bottle_sha}\"" || fail "default cellar not omitted"
+
+case_name="bottle: a bump drops the previous version's bottle"
+conf_extra=""
+formula_bottle=$'\n  bottle do\n    root_url "https://example.com/v0.1.0"\n    sha256 cellar: :any, arm64_sequoia: "abc"\n  end'
+setup 0.1.0
+formula_bottle=""
+release 0 0.1.1
+assert_released 0.1.1
+! remote_formula | grep -qF "bottle do" || fail "stale bottle block kept"
+! remote_formula | grep -qF "root_url" || fail "stale root_url kept"
+remote_formula | grep -qF "depends_on macos: :sequoia" || fail "the strip took more than the bottle block"
+
+case_name="bottle: a bottle that was not poured fails the check"
+conf_extra="bottle=yes"
+setup 0.1.0
+export STUB_POURED=false
+release 5
+assert_out "instead of pouring"
+
+case_name="sign: signs the keg's code and notarizes it before bottling"
+conf_extra="$sign_conf"
+setup 0.1.0
+release 0
+assert_bottled 0.1.0
+assert_log "codesign --force --options runtime --timestamp --sign Developer ID Application: Test (TEAM) ${STUB_CELLAR}/0.1.0/bin/demo"
+refute_log "${STUB_CELLAR}/0.1.0/README"
+assert_log "xcrun notarytool submit"
+assert_log "--keychain-profile demo-notary --wait --output-format json"
+assert_log "codesign -dvv"
+[[ "$(grep -n 'notarytool' "$STUB_LOG" | cut -d: -f1)" -lt "$(grep -n 'brew bottle' "$STUB_LOG" | cut -d: -f1)" ]] ||
+    fail "bottled before notarizing"
+
+case_name="sign: a rejected notarization stops before the upload"
+conf_extra="$sign_conf"
+setup 0.1.0
+export STUB_NOTARY_STATUS=Invalid
+release 5
+assert_out "notarytool log sub-1"
+refute_log "brew bottle"
+refute_log "gh release upload"
+! remote_formula | grep -qF "bottle do" || fail "formula bottled despite the rejection"
+
+case_name="sign: a poured binary signed by someone else fails the check"
+conf_extra="$sign_conf"
+setup 0.1.0
+export STUB_AUTHORITY="Apple Development: Someone"
+release 5
+assert_out "Developer ID Application: Test (TEAM)"
+conf_extra=""
 
 echo "PASS: scripts/release"
