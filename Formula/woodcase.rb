@@ -1,15 +1,10 @@
 class Woodcase < Formula
   desc "Read, edit, render and generate code from Pen .pen design files"
   homepage "https://github.com/bensyverson/woodcase"
-  url "https://github.com/bensyverson/woodcase/archive/refs/tags/v0.1.4.tar.gz"
-  sha256 "8c3cbc1d0d2bef9b6b9c740efd46c6743699b347719ab6b8fac9193da0d4a048"
+  url "https://github.com/bensyverson/woodcase/archive/refs/tags/v0.1.5.tar.gz"
+  sha256 "eafd6c3fd1deb21c9b265dfa2c93ca857defca914cb3d449ffaed4cce4a2762f"
   license "MIT"
   head "https://github.com/bensyverson/woodcase.git", branch: "main"
-
-  bottle do
-    root_url "https://github.com/bensyverson/woodcase/releases/download/v0.1.4"
-    sha256 cellar: :any_skip_relocation, arm64_sequoia: "b6d49abd1e28a564fa2371ac80c9a00e03fe4635f516120d5e90fa9382102967"
-  end
 
   depends_on xcode: ["26.0", :build]
   depends_on macos: :sequoia
