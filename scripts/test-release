@@ -280,6 +280,16 @@ release 3 0.1.1
 assert_out "uncommitted"
 [[ -z "$(remote_tag 0.1.1)" ]] || fail "tagged despite a dirty tree"
 
+case_name="dirty tree is fine once tagged: the tool repo is only read"
+setup 0.1.1
+git -C "$wc" tag -a v0.1.1 -m "Demo 0.1.1"
+git -C "$wc" push -q origin v0.1.1
+echo "// another session's edit" >>"${wc}/${version_file}"
+release 0
+grep -qF "another session's edit" "${wc}/${version_file}" || fail "the edit was touched"
+git -C "$wc" checkout -q -- "$version_file"
+assert_released 0.1.1
+
 case_name="dirty tap"
 setup 0.1.0
 echo "# edit" >>"${tap}/Formula/demo.rb"

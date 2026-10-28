@@ -38,7 +38,8 @@
 # Homebrew does not quarantine a formula's downloads, so signing is optional: it is for
 # anyone who takes the binary out of the bottle by hand.
 #
-# Both repos must be clean, on main and not behind origin. The tool is the checkout
+# Both repos must be on main and not behind origin, and clean (the tool's only until
+# its tag is pushed, as later steps just read it). The tool is the checkout
 # holding the current directory, or --repo; the tap is the one holding this script.
 # --dry-run prints the plan and changes nothing.
 #
@@ -164,9 +165,11 @@ older="$(printf '%s\n%s\n' "$target" "$source_version" | sort -V | head -1)"
 
 # --- Preconditions: nothing below this block changes anything until they all hold. ----
 
+# clean <dir>: whether the checkout has no uncommitted changes to tracked files.
+clean() { [[ -z "$(git -C "$1" status --porcelain --untracked-files=no)" ]]; }
+
+clean "$tap" || die 3 "${tap} has uncommitted changes; commit or stash them first"
 for dir in "$repo" "$tap"; do
-    [[ -z "$(git -C "$dir" status --porcelain --untracked-files=no)" ]] ||
-        die 3 "${dir} has uncommitted changes; commit or stash them first"
     [[ "$(git -C "$dir" symbolic-ref --short HEAD)" == main ]] || die 3 "${dir} is not on main"
     git -C "$dir" fetch -q origin main || die 3 "could not fetch origin in ${dir}"
     git -C "$dir" merge-base --is-ancestor origin/main HEAD ||
@@ -198,6 +201,8 @@ fi
 
 tagged=false
 [[ -n "$remote_tag_commit" ]] && tagged=true
+# Once tagged, the tool's checkout is only read, so another session's edit there can stay.
+$tagged || clean "$repo" || die 3 "${repo} has uncommitted changes; commit or stash them first"
 formula_done=false
 [[ "$formula_version" == "$target" ]] && formula_done=true
 
