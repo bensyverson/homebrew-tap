@@ -6,6 +6,11 @@ class Woodcase < Formula
   license "MIT"
   head "https://github.com/bensyverson/woodcase.git", branch: "main"
 
+  bottle do
+    root_url "https://github.com/bensyverson/woodcase/releases/download/v0.1.4"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "b6d49abd1e28a564fa2371ac80c9a00e03fe4635f516120d5e90fa9382102967"
+  end
+
   depends_on xcode: ["26.0", :build]
   depends_on macos: :sequoia
 
