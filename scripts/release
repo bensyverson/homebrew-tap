@@ -376,7 +376,9 @@ if ! $bottle_done; then
     asset="${work_dir}/${formula_name}-${target}.${bottle_tag}.bottle.tar.gz"
     mv "${built[0]}" "$asset"
     bottle_sha="$(shasum -a 256 "$asset" | cut -d' ' -f1)"
-    cellar="$(jq -r '.[].bottle.tags[].cellar' "${json[0]}")"
+    # brew bottle writes the cellar beside the tags; a tag of its own would override it.
+    cellar="$(jq -r '.[].bottle | (.tags[].cellar // .cellar) // empty' "${json[0]}" | head -1)"
+    [[ -n "$cellar" ]] || die 5 "found no cellar in $(basename "${json[0]}")"
     default_cellar=/usr/local/Cellar
     [[ "$(uname -m)" == arm64 ]] && default_cellar=/opt/homebrew/Cellar
     case "$cellar" in

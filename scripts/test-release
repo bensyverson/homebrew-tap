@@ -63,8 +63,9 @@ case "$1" in
     list) [[ -n "${STUB_BREW_INSTALLED:-}" ]] ;;
     bottle)
         printf 'bottle bytes' >"demo--9.9.9.arm64_hosttag.bottle.tar.gz"
-        printf '{"bensyverson/tap/demo":{"bottle":{"tags":{"arm64_hosttag":{"cellar":"%s"}}}}}' \
-            "${STUB_BOTTLE_CELLAR:-any_skip_relocation}" >"demo--9.9.9.arm64_hosttag.bottle.json"
+        # As brew bottle writes it: the cellar once, beside the tags, not in each.
+        printf '{"bensyverson/tap/demo":{"bottle":{"cellar":"%s","tags":{"arm64_hosttag":{}}}}}' \
+            "${STUB_BOTTLE_CELLAR-any_skip_relocation}" >"demo--9.9.9.arm64_hosttag.bottle.json"
         ;;
     info) printf '{"formulae":[{"installed":[{"poured_from_bottle":%s}]}]}' "${STUB_POURED:-true}" ;;
 esac
@@ -510,6 +511,14 @@ default_cellar="$([[ "$(uname -m)" == arm64 ]] && echo /opt/homebrew/Cellar || e
 export STUB_BOTTLE_CELLAR="$default_cellar"
 release 0
 remote_formula | grep -qF "    sha256 ${bottle_tag}: \"${bottle_sha}\"" || fail "default cellar not omitted"
+
+case_name="bottle: a bottle JSON without a cellar stops before the upload"
+conf_extra="bottle=yes"
+setup 0.1.0
+export STUB_BOTTLE_CELLAR=""
+release 5
+assert_out "cellar"
+refute_log "gh release upload"
 
 case_name="bottle: a bump drops the previous version's bottle"
 conf_extra=""
