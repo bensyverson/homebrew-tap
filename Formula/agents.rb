@@ -1,15 +1,10 @@
 class Agents < Formula
   desc "Keep the instructions you give coding agents the same across all your repos"
   homepage "https://github.com/bensyverson/agents"
-  url "https://github.com/bensyverson/agents/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "3315c571ec42df54d2881b8a75fe57c905327e78ba970990961372b266927531"
+  url "https://github.com/bensyverson/agents/archive/refs/tags/v0.2.0.tar.gz"
+  sha256 "7ffb7e31d3ddb62842b05574e3cd74572c1a2c49402dcedcd32c27bd98c31af8"
   license "MIT"
   head "https://github.com/bensyverson/agents.git", branch: "main"
-
-  bottle do
-    root_url "https://github.com/bensyverson/agents/releases/download/v0.1.0"
-    sha256 cellar: :any_skip_relocation, arm64_sequoia: "cb8a45681d1e651d9f534d53c41499b7f255169c02fdb33b44b3ad0cf4de1fd2"
-  end
 
   depends_on "go" => :build
   depends_on macos: :sequoia
