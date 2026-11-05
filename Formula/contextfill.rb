@@ -1,8 +1,8 @@
 class Contextfill < Formula
   desc "Report how full a Claude Code or OpenCode session's context window is"
   homepage "https://github.com/bensyverson/contextfill"
-  url "https://github.com/bensyverson/contextfill/archive/refs/tags/v0.1.2.tar.gz"
-  sha256 "110a5980353432aab66fb1540a2c0c04baeb7673d76ffab2fc43a761b01a6429"
+  url "https://github.com/bensyverson/contextfill/archive/refs/tags/v0.1.3.tar.gz"
+  sha256 "c4760f68c2404417dea2f8b087ff148ebb1d59a157dc32466174c573b54d5b4d"
   license "MIT"
   head "https://github.com/bensyverson/contextfill.git", branch: "main"
 
