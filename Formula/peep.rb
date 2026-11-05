@@ -6,6 +6,11 @@ class Peep < Formula
   license "MIT"
   head "https://github.com/bensyverson/PixelPeeper.git", branch: "main"
 
+  bottle do
+    root_url "https://github.com/bensyverson/PixelPeeper/releases/download/v0.1.0"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "73ef95ee5d07695be4210c34787bd5350a15b790135fb29dac6cec938d48029d"
+  end
+
   depends_on xcode: ["26.4", :build]
   depends_on macos: :sequoia
 
