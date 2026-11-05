@@ -6,6 +6,11 @@ class Agents < Formula
   license "MIT"
   head "https://github.com/bensyverson/agents.git", branch: "main"
 
+  bottle do
+    root_url "https://github.com/bensyverson/agents/releases/download/v0.1.0"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "cb8a45681d1e651d9f534d53c41499b7f255169c02fdb33b44b3ad0cf4de1fd2"
+  end
+
   depends_on "go" => :build
   depends_on macos: :sequoia
 
