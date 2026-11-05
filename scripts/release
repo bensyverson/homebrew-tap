@@ -28,7 +28,8 @@
 #        code (with sign=), bottle it, upload the bottle to the tag's GitHub release and
 #        write the formula's bottle block, commit and push the tap (unless it has one)
 #     5. update Homebrew's copy of the tap, install or reinstall (a fresh install that must
-#        pour the bottle, with bottle=yes), brew test and brew audit --strict
+#        pour the bottle, with bottle=yes), brew test and brew audit --strict, then
+#        check that each of its commands on PATH is Homebrew's copy, not an older build
 #                                                                 (always; --no-verify skips)
 #
 # A bottle is built on this machine but tagged for the formula's oldest macOS, its
@@ -231,7 +232,7 @@ if $dry_run; then
         say "would build the ${bottle_tag} bottle of ${formula_ref}${sign:+, signed by ${sign}}${notary_profile:+ and notarized}"
         say "would upload it to ${github_repo}'s ${tag} release and write the formula's bottle block"
     fi
-    $verify && say "would install ${formula_ref} through Homebrew, then brew test and brew audit"
+    $verify && say "would install ${formula_ref} through Homebrew, then brew test, brew audit and check PATH runs it"
     exit 0
 fi
 
@@ -452,4 +453,17 @@ else
 fi
 brew test "$formula_ref" || die 5 "brew test failed"
 brew audit --strict "$formula_ref" || die 5 "brew audit failed"
+
+# Typing the name must run what was just released, not an older build (a go install
+# or a SwiftPM install) that comes earlier on PATH.
+brew_bin="$(brew --prefix)/bin"
+while IFS= read -r exe; do
+    name="$(basename "$exe")"
+    found="$(command -v "$name" || true)"
+    [[ -n "$found" ]] ||
+        die 5 "${name} is not on PATH; the release is published, but add ${brew_bin} to PATH to run it"
+    [[ "$found" == "${brew_bin}/${name}" ]] ||
+        die 5 "${name} on PATH is ${found}, which hides Homebrew's ${brew_bin}/${name}; the release is published, so remove the old copy: rm ${found}"
+    say "${name} on PATH is Homebrew's"
+done < <(find "$(brew --cellar "$formula_ref")/${target}/bin" -maxdepth 1 \( -type f -o -type l \) -perm -u+x 2>/dev/null)
 say "Released ${formula_name} ${target}"

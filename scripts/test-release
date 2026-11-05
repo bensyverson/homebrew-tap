@@ -60,6 +60,7 @@ echo "brew $*" >>"$STUB_LOG"
 case "$1" in
     --repository) echo "$STUB_BREW_TAP" ;;
     --cellar) echo "$STUB_CELLAR" ;;
+    --prefix) echo "$STUB_PREFIX" ;;
     list) [[ -n "${STUB_BREW_INSTALLED:-}" ]] ;;
     bottle)
         printf 'bottle bytes' >"demo--9.9.9.arm64_hosttag.bottle.tar.gz"
@@ -152,6 +153,11 @@ EOF
         cp /usr/bin/true "${STUB_CELLAR}/${v}/bin/demo"
         echo "not code" >"${STUB_CELLAR}/${v}/README"
     done
+    # Homebrew's bin, which release() puts on PATH unless a case says otherwise.
+    export STUB_PREFIX="${root}/prefix"
+    mkdir -p "${STUB_PREFIX}/bin"
+    cp /usr/bin/true "${STUB_PREFIX}/bin/demo"
+    unset STUB_SHADOW STUB_OFF_PATH
     unset STUB_CHECK_EXIT STUB_BREW_INSTALLED STUB_BOTTLE_CELLAR STUB_POURED STUB_GH_RELEASE
     unset STUB_AUTHORITY STUB_NOTARY_STATUS
 }
@@ -181,7 +187,12 @@ EOF
 release() {
     local expected="$1" status=0
     shift
-    (cd "${wc}/Sources" && "${tap}/scripts/release" "$@") >"${work}/out" 2>&1 </dev/null || status=$?
+    # STUB_SHADOW is a directory that comes before Homebrew's bin; STUB_OFF_PATH leaves
+    # Homebrew's bin off PATH altogether.
+    local path="$PATH"
+    [[ -n "${STUB_OFF_PATH:-}" ]] || path="${STUB_PREFIX}/bin:${path}"
+    [[ -z "${STUB_SHADOW:-}" ]] || path="${STUB_SHADOW}:${path}"
+    (cd "${wc}/Sources" && PATH="$path" "${tap}/scripts/release" "$@") >"${work}/out" 2>&1 </dev/null || status=$?
     [[ "$status" == "$expected" ]] || fail "exit ${status}, expected ${expected}"
 }
 
@@ -215,6 +226,7 @@ assert_released() {
     assert_log "brew test bensyverson/tap/demo"
     assert_log "brew audit --strict bensyverson/tap/demo"
     git -C "$STUB_BREW_TAP" log -1 --format=%s | grep -qF "$v" || fail "brew's tap clone not updated"
+    assert_out "demo on PATH is Homebrew's"
 }
 
 # --- Cases ------------------------------------------------------------------------------
@@ -568,5 +580,28 @@ export STUB_AUTHORITY="Apple Development: Someone"
 release 5
 assert_out "Developer ID Application: Test (TEAM)"
 conf_extra=""
+
+case_name="path: a copy earlier on PATH fails the check, naming it"
+setup 0.1.0
+export STUB_SHADOW="${work}/case/gobin"
+mkdir -p "$STUB_SHADOW"
+cp /usr/bin/true "${STUB_SHADOW}/demo"
+release 5 0.1.1
+[[ -n "$(remote_tag 0.1.1)" ]] || fail "v0.1.1 not pushed before the check"
+assert_out "${STUB_SHADOW}/demo"
+assert_out "rm ${STUB_SHADOW}/demo"
+
+case_name="path: Homebrew's bin off PATH fails the check"
+setup 0.1.0
+export STUB_OFF_PATH=1
+release 5 0.1.1
+assert_out "demo is not on PATH"
+
+case_name="path: --no-verify skips the PATH check too"
+setup 0.1.0
+export STUB_SHADOW="${work}/case/gobin"
+mkdir -p "$STUB_SHADOW"
+cp /usr/bin/true "${STUB_SHADOW}/demo"
+release 0 0.1.1 --no-verify
 
 echo "PASS: scripts/release"
