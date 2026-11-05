@@ -7,6 +7,7 @@ class Contextfill < Formula
   head "https://github.com/bensyverson/contextfill.git", branch: "main"
 
   depends_on "go" => :build
+  depends_on macos: :sequoia
 
   def install
     system "go", "build", *std_go_args, "./cmd/contextfill"
