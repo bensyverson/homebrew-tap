@@ -6,6 +6,11 @@ class Sleepy < Formula
   license "MIT"
   head "https://github.com/bensyverson/sleepyhollow.git", branch: "main"
 
+  bottle do
+    root_url "https://github.com/bensyverson/sleepyhollow/releases/download/v0.1.0"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "cde10e5922e30c42960bc5f749e68a17e78264fc53ed9e2da68539da2d61aa16"
+  end
+
   depends_on xcode: ["26.4", :build]
   depends_on macos: :sequoia
 
