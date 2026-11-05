@@ -1,8 +1,8 @@
 class Sleepy < Formula
   desc "Headless WebKit browser for agents"
   homepage "https://github.com/bensyverson/sleepyhollow"
-  url "https://github.com/bensyverson/sleepyhollow/archive/refs/tags/v0.0.0.tar.gz"
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+  url "https://github.com/bensyverson/sleepyhollow/archive/refs/tags/v0.1.0.tar.gz"
+  sha256 "4fc307e119f6006131e447c8179ea85954388d6c5af245f83c19cc35f5190cbe"
   license "MIT"
   head "https://github.com/bensyverson/sleepyhollow.git", branch: "main"
 
