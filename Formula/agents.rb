@@ -1,8 +1,8 @@
 class Agents < Formula
   desc "Keep the instructions you give coding agents the same across all your repos"
   homepage "https://github.com/bensyverson/agents"
-  url "https://github.com/bensyverson/agents/archive/refs/tags/v0.0.0.tar.gz"
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+  url "https://github.com/bensyverson/agents/archive/refs/tags/v0.1.0.tar.gz"
+  sha256 "3315c571ec42df54d2881b8a75fe57c905327e78ba970990961372b266927531"
   license "MIT"
   head "https://github.com/bensyverson/agents.git", branch: "main"
 
