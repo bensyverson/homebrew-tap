@@ -1,8 +1,8 @@
 class Job < Formula
   desc "Plan and track work from the command line, built for coding agents"
   homepage "https://github.com/bensyverson/jobs"
-  url "https://github.com/bensyverson/jobs/archive/refs/tags/v0.0.0.tar.gz"
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+  url "https://github.com/bensyverson/jobs/archive/refs/tags/v0.1.0.tar.gz"
+  sha256 "006175f4193cf037ed203e0a7738e966058ad82cac72f2110a44fa2aaa645b3b"
   license "MIT"
   head "https://github.com/bensyverson/jobs.git", branch: "main"
 
