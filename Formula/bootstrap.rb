@@ -3,6 +3,7 @@ class Bootstrap < Formula
   homepage "https://github.com/bensyverson/bootstrap"
   url "https://github.com/bensyverson/bootstrap/archive/refs/tags/v0.2.0.tar.gz"
   sha256 "b2e40e616867fddb6ab0a9b438ea4a4ae9dc335537155dddb6a97d64d322c957"
+  license "MIT"
   head "https://github.com/bensyverson/bootstrap.git", branch: "main"
 
   depends_on "go" => :build
