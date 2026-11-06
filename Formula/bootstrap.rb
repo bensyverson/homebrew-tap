@@ -6,6 +6,11 @@ class Bootstrap < Formula
   license "MIT"
   head "https://github.com/bensyverson/bootstrap.git", branch: "main"
 
+  bottle do
+    root_url "https://github.com/bensyverson/bootstrap/releases/download/v0.3.0"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "458bde0ba4b7ab0fb4dd275bca19def1ceb2eb2f1503ae539bd3f8f165a85273"
+  end
+
   depends_on "go" => :build
   depends_on macos: :sequoia
 
