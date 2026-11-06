@@ -6,6 +6,11 @@ class Contextfill < Formula
   license "MIT"
   head "https://github.com/bensyverson/contextfill.git", branch: "main"
 
+  bottle do
+    root_url "https://github.com/bensyverson/contextfill/releases/download/v0.2.0"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "77effb56e1773cece55c6584483c2cbcc2e163cd7bd88fb9a31b0dc34141824c"
+  end
+
   depends_on "go" => :build
   depends_on macos: :sequoia
 
