@@ -9,6 +9,7 @@ brew install bensyverson/tap/job
 brew install bensyverson/tap/agents
 brew install bensyverson/tap/sleepy
 brew install bensyverson/tap/peep
+brew install bensyverson/tap/bootstrap
 ```
 
 | Formula | What it is |
@@ -19,6 +20,7 @@ brew install bensyverson/tap/peep
 | `agents` | Keeps the instructions you give coding agents the same across all your repos. Pours a prebuilt bottle on Apple silicon (macOS 15+); elsewhere builds from source with Go. [Source](https://github.com/bensyverson/agents) |
 | `sleepy` | A headless WebKit browser for agents. Pours a prebuilt bottle on Apple silicon (macOS 15+); elsewhere builds from source with Xcode 26.4 or later. [Source](https://github.com/bensyverson/sleepyhollow) |
 | `peep` | Compares images and samples their pixels. Pours a prebuilt bottle on Apple silicon (macOS 15+); elsewhere builds from source with Xcode 26.4 or later. [Source](https://github.com/bensyverson/PixelPeeper) |
+| `bootstrap` | Sets up a Mac and a project for working with Claude Code or OpenCode; the setup installs it here itself once Homebrew is in. Pours a prebuilt bottle on Apple silicon (macOS 15+); elsewhere builds from source with Go. [Source](https://github.com/bensyverson/bootstrap) |
 
 ## Releasing a new version
 
