@@ -6,6 +6,11 @@ class Job < Formula
   license "MIT"
   head "https://github.com/bensyverson/jobs.git", branch: "main"
 
+  bottle do
+    root_url "https://github.com/bensyverson/jobs/releases/download/v0.3.0"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "e1d36a87467ed0de8c903d76b07553c02d784368a1b71f6f621d6f02dbdf185c"
+  end
+
   depends_on "go" => :build
   depends_on macos: :sequoia
 
