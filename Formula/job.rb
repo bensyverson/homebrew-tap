@@ -1,15 +1,10 @@
 class Job < Formula
   desc "Command-line planner and task tracker built for coding agents"
   homepage "https://github.com/bensyverson/jobs"
-  url "https://github.com/bensyverson/jobs/archive/refs/tags/v0.2.0.tar.gz"
-  sha256 "cc188b839246c5576010263dfc2b90579a8fb173c8839fc09da685f5e3d15cb7"
+  url "https://github.com/bensyverson/jobs/archive/refs/tags/v0.3.0.tar.gz"
+  sha256 "7750a43c5a1df5f4e1a428f20986beb5401a0763ed782fcf7d254c689abc9ab1"
   license "MIT"
   head "https://github.com/bensyverson/jobs.git", branch: "main"
-
-  bottle do
-    root_url "https://github.com/bensyverson/jobs/releases/download/v0.2.0"
-    sha256 cellar: :any_skip_relocation, arm64_sequoia: "e4175ddeb94dfe8f442cd1996fbdd1a0a36b068a698252098f8b09220dbaf47e"
-  end
 
   depends_on "go" => :build
   depends_on macos: :sequoia
