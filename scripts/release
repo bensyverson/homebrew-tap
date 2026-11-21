@@ -10,6 +10,8 @@
 #     name=contextfill                         the tag message's name (default: formula)
 #     version_file=cmd/contextfill/version.go  the source file that states the version
 #     version_line=const version = "%s"        the line stating it, %s for the version
+#     version_also=Cargo.lock                  more files a bump changes, which the check
+#                                              refreshes (space-separated; default: none)
 #     check=make check                         lint and test, run in the repo
 #     bottle=yes                               ship a prebuilt bottle (default: no)
 #     sign=Developer ID Application: … (TEAM)  sign the bottle's code with this identity
@@ -21,6 +23,8 @@
 # up where it stopped:
 #
 #     1. bump the version, run check, commit                     (unless the source says it)
+#        it with version_also's files; a listed file the check left alone, or any
+#        other file the check changed, stops the release before the commit
 #     2. push main, then tag v<version> (annotated) and push it   (unless origin has it)
 #     3. hash GitHub's tarball of the tag, rewrite the formula's
 #        url and sha256, commit and push the tap                  (unless the formula has it)
@@ -73,7 +77,7 @@ while [[ $# -gt 0 ]]; do
             repo="$2"
             shift 2
             ;;
-        -h|--help) sed -n '2,50p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,54p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         -*) die 2 "unknown flag '$1' (try --help)" ;;
         *)
             [[ -z "$target" ]] || die 2 "one version only (got '$target' and '$1')"
@@ -93,7 +97,7 @@ repo="$(cd "$repo" && pwd -P)"
 
 conf="${repo}/scripts/release.conf"
 [[ -f "$conf" ]] || die 3 "no scripts/release.conf in ${repo} (see --help for its keys)"
-formula_name="" name="" version_file="" version_line="" check="" bottle=no sign="" notary_profile=""
+formula_name="" name="" version_file="" version_line="" version_also="" check="" bottle=no sign="" notary_profile=""
 while IFS= read -r line || [[ -n "$line" ]]; do
     [[ -z "${line//[[:space:]]/}" || "$line" == \#* ]] && continue
     [[ "$line" == *=* ]] || die 3 "release.conf: '${line}' is not key=value"
@@ -104,6 +108,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
         name) name="$value" ;;
         version_file) version_file="$value" ;;
         version_line) version_line="$value" ;;
+        version_also) version_also="$value" ;;
         check) check="$value" ;;
         bottle) bottle="$value" ;;
         sign) sign="$value" ;;
@@ -128,6 +133,12 @@ formula_ref="${tap_name}/${formula_name}"
 formula="${tap}/Formula/${formula_name}.rb"
 [[ -f "${repo}/${version_file}" ]] || die 3 "no ${version_file} in ${repo}"
 [[ -f "$formula" ]] || die 3 "no formula at ${formula}"
+also_files=()
+[[ -z "${version_also//[[:space:]]/}" ]] || read -r -a also_files <<<"$version_also"
+for f in ${also_files[@]+"${also_files[@]}"}; do
+    git -C "$repo" ls-files --error-unmatch -- "$f" >/dev/null 2>&1 ||
+        die 3 "release.conf: version_also names ${f}, which ${repo} does not track"
+done
 
 # read_version: the version on the first line of stdin matching version_line.
 read_version() {
@@ -222,7 +233,7 @@ if $tagged && $formula_done && $bottle_done; then
 fi
 
 if $dry_run; then
-    $bump && say "would bump ${version_file} from ${source_version} to ${target} and commit it"
+    $bump && say "would bump ${version_file} from ${source_version} to ${target} and commit it${version_also:+ with ${also_files[*]}}"
     if ! $tagged; then
         $skip_tests || say "would run: ${check}"
         say "would push main, then tag ${tag} and push it"
@@ -238,6 +249,9 @@ fi
 
 # --- 1. Bump, check, commit -----------------------------------------------------------
 
+# unbump: undoes the bump in the version file and in version_also's files.
+unbump() { git -C "$repo" checkout -q -- "$version_file" ${also_files[@]+"${also_files[@]}"}; }
+
 if ! $tagged; then
     if $bump; then
         say "Bumping ${source_version} → ${target}"
@@ -246,7 +260,9 @@ if ! $tagged; then
         done_once=false
         while IFS= read -r line || [[ -n "$line" ]]; do
             if ! $done_once && [[ "$line" == *"$old_line"* ]]; then
-                line="${line/"$old_line"/"$new_line"}"
+                # Split around the old line rather than ${line/old/new}: macOS's bash 3.2
+                # keeps the quotes of a quoted replacement in the result.
+                line="${line%%"$old_line"*}${new_line}${line#*"$old_line"}"
                 done_once=true
             fi
             printf '%s\n' "$line"
@@ -256,12 +272,30 @@ if ! $tagged; then
     if ! $skip_tests; then
         say "Running: ${check}"
         if ! (cd "$repo" && bash -c "$check"); then
-            $bump && git -C "$repo" checkout -q -- "$version_file"
+            $bump && unbump
             die 5 "the check failed; nothing was committed or pushed"
         fi
     fi
+    if $bump && [[ ${#also_files[@]} -gt 0 ]]; then
+        changed="$(git -C "$repo" diff --name-only)"
+        for f in "${also_files[@]}"; do
+            if ! grep -qxF -- "$f" <<<"$changed"; then
+                unbump
+                die 5 "the check left ${f} unchanged, so the tag would carry it stale; the check must refresh it (--skip-tests skips the check). Nothing was committed or pushed"
+            fi
+        done
+        while IFS= read -r f; do
+            [[ -n "$f" && "$f" != "$version_file" ]] || continue
+            listed=false
+            for g in "${also_files[@]}"; do [[ "$f" == "$g" ]] && listed=true; done
+            if ! $listed; then
+                unbump
+                die 5 "the check changed ${f}, which release.conf's version_also does not list. Nothing was committed or pushed; the change is left for you to inspect"
+            fi
+        done <<<"$changed"
+    fi
     if $bump; then
-        git -C "$repo" commit -q -m "Bumps the version to ${target}" -- "$version_file"
+        git -C "$repo" commit -q -m "Bumps the version to ${target}" -- "$version_file" ${also_files[@]+"${also_files[@]}"}
     fi
 
     # --- 2. Push, tag, push the tag -----------------------------------------------------

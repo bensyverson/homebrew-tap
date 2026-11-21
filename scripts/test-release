@@ -36,6 +36,8 @@ mkdir -p "$stubs"
 cat >"${stubs}/stub-check" <<'EOF'
 #!/usr/bin/env bash
 echo "check $*" >>"$STUB_LOG"
+# As cargo refreshes Cargo.lock: appends to each file named, relative to the repo.
+for f in ${STUB_CHECK_WRITES:-}; do echo "refreshed by the check" >>"$f"; done
 exit "${STUB_CHECK_EXIT:-0}"
 EOF
 # curl writes "tarball of <url>" to its -o file, so the sha is a function of the URL.
@@ -158,7 +160,7 @@ EOF
     mkdir -p "${STUB_PREFIX}/bin"
     cp /usr/bin/true "${STUB_PREFIX}/bin/demo"
     unset STUB_SHADOW STUB_OFF_PATH
-    unset STUB_CHECK_EXIT STUB_BREW_INSTALLED STUB_BOTTLE_CELLAR STUB_POURED STUB_GH_RELEASE
+    unset STUB_CHECK_EXIT STUB_CHECK_WRITES STUB_BREW_INSTALLED STUB_BOTTLE_CELLAR STUB_POURED STUB_GH_RELEASE
     unset STUB_AUTHORITY STUB_NOTARY_STATUS
 }
 
@@ -400,6 +402,68 @@ release 5 0.1.1
 [[ -z "$(git -C "$wc" status --porcelain)" ]] || fail "repo left dirty"
 [[ -z "$(remote_tag 0.1.1)" ]] || fail "tagged despite a failing check"
 refute_log "curl"
+
+# --- version_also: files a bump changes besides the version file, such as Cargo.lock ---
+
+# lock_fixture: the tool tracks Cargo.lock and NOTES beside its version file.
+lock_fixture() {
+    echo "lock for 0.1.0" >"${wc}/Cargo.lock"
+    echo "notes" >"${wc}/NOTES"
+    git -C "$wc" add Cargo.lock NOTES
+    git -C "$wc" commit -q -m "Adds the lock"
+    git -C "$wc" push -q origin main
+}
+
+case_name="version_also: a bump commits the files the check refreshed"
+conf_extra="version_also=Cargo.lock"
+setup 0.1.0
+lock_fixture
+export STUB_CHECK_WRITES="Cargo.lock"
+release 0 0.1.1
+git -C "${work}/case/demo.git" show v0.1.1:Cargo.lock | grep -qF "refreshed by the check" ||
+    fail "the tag lacks the refreshed Cargo.lock"
+git -C "$wc" show --stat --format= HEAD | grep -qF "Cargo.lock" || fail "the bump commit lacks Cargo.lock"
+assert_released 0.1.1
+
+case_name="version_also: a listed file the check left alone stops before any commit"
+conf_extra="version_also=Cargo.lock"
+setup 0.1.0
+lock_fixture
+before="$(git -C "$wc" rev-parse HEAD)"
+release 5 0.1.1
+assert_out "Cargo.lock"
+[[ "$(git -C "$wc" rev-parse HEAD)" == "$before" ]] || fail "committed despite a stale Cargo.lock"
+[[ "$(source_version)" == 0.1.0 ]] || fail "bump left behind"
+[[ -z "$(git -C "$wc" status --porcelain)" ]] || fail "repo left dirty"
+[[ -z "$(remote_tag 0.1.1)" ]] || fail "tagged despite a stale Cargo.lock"
+
+case_name="version_also: the check changing an unlisted file stops before any commit"
+conf_extra="version_also=Cargo.lock"
+setup 0.1.0
+lock_fixture
+export STUB_CHECK_WRITES="Cargo.lock NOTES"
+before="$(git -C "$wc" rev-parse HEAD)"
+release 5 0.1.1
+assert_out "NOTES"
+[[ "$(git -C "$wc" rev-parse HEAD)" == "$before" ]] || fail "committed despite an unlisted change"
+[[ "$(source_version)" == 0.1.0 ]] || fail "bump left behind"
+[[ "$(git -C "$wc" status --porcelain)" == " M NOTES" ]] ||
+    fail "expected only NOTES left for inspection, got: $(git -C "$wc" status --porcelain)"
+[[ -z "$(remote_tag 0.1.1)" ]] || fail "tagged despite an unlisted change"
+
+case_name="version_also: a listed file that is not tracked is a bad release.conf"
+conf_extra="version_also=Cargo.lock"
+setup 0.1.0
+release 3 0.1.1
+assert_out "Cargo.lock"
+
+case_name="version_also: the dry run names the files it would commit"
+conf_extra="version_also=Cargo.lock"
+setup 0.1.0
+lock_fixture
+release 0 0.1.1 --dry-run
+assert_out "with Cargo.lock"
+conf_extra=""
 
 case_name="already installed: reinstalls"
 setup 0.1.1
