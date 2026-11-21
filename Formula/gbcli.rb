@@ -1,8 +1,8 @@
 class Gbcli < Formula
   desc "Agent-friendly Game Boy development tool: headless emulator and build loop"
   homepage "https://github.com/bensyverson/gbcli"
-  url "https://github.com/bensyverson/gbcli/archive/refs/tags/v0.0.0.tar.gz"
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+  url "https://github.com/bensyverson/gbcli/archive/refs/tags/v0.1.0.tar.gz"
+  sha256 "f4fdd730ce00978c0c7b04d43afd78fe562cd77bb83ff99dbe3136727e998720"
   license "MIT"
   head "https://github.com/bensyverson/gbcli.git", branch: "main"
 
