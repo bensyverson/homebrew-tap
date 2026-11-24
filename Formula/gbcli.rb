@@ -6,6 +6,11 @@ class Gbcli < Formula
   license "MIT"
   head "https://github.com/bensyverson/gbcli.git", branch: "main"
 
+  bottle do
+    root_url "https://github.com/bensyverson/gbcli/releases/download/v0.2.0"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "d72e23e5440d9e3510537fa90fa718e8b6bca1354097c533cf8dbe8fae444311"
+  end
+
   depends_on "rust" => :build
   depends_on "rgbds"
 
