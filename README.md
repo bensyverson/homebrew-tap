@@ -11,6 +11,7 @@ brew install bensyverson/tap/sleepy
 brew install bensyverson/tap/peep
 brew install bensyverson/tap/bootstrap
 brew install bensyverson/tap/gbcli
+brew install bensyverson/tap/timetattle
 ```
 
 | Formula | What it is |
@@ -23,6 +24,7 @@ brew install bensyverson/tap/gbcli
 | `peep` | Compares images and samples their pixels. Pours a prebuilt bottle on Apple silicon (macOS 15+); elsewhere builds from source with Xcode 26.4 or later. [Source](https://github.com/bensyverson/PixelPeeper) |
 | `bootstrap` | Sets up a Mac and a project for working with Claude Code or OpenCode; the setup installs it here itself once Homebrew is in. Pours a prebuilt bottle on Apple silicon (macOS 15+); elsewhere builds from source with Go. [Source](https://github.com/bensyverson/bootstrap) |
 | `gbcli` | A headless Game Boy emulator and build loop for agents making Game Boy games; installs RGBDS too. Pours a prebuilt bottle on Apple silicon (macOS 15+); elsewhere, Linux included, builds from source with Rust. [Source](https://github.com/bensyverson/gbcli) |
+| `timetattle` | Reconstructs when work happened, and for whom, from the traces it leaves. macOS only. Pours a prebuilt bottle on Apple silicon (macOS 15+); elsewhere builds from source with Go. [Source](https://github.com/bensyverson/timetattle) |
 
 ## Releasing a new version
 
