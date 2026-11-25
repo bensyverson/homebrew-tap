@@ -1,8 +1,8 @@
 class Timetattle < Formula
   desc "Reconstructs when work happened, and for whom, from the traces it leaves"
   homepage "https://github.com/bensyverson/timetattle"
-  url "https://github.com/bensyverson/timetattle/archive/refs/tags/v0.0.0.tar.gz"
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+  url "https://github.com/bensyverson/timetattle/archive/refs/tags/v0.1.0.tar.gz"
+  sha256 "71ead6cd6d2eb091e55192e8339915f6906271f7a24812318a336854283ffb3e"
   license "MIT"
   head "https://github.com/bensyverson/timetattle.git", branch: "main"
 
