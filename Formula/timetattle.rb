@@ -1,15 +1,10 @@
 class Timetattle < Formula
   desc "Reconstructs when work happened, and for whom, from the traces it leaves"
   homepage "https://github.com/bensyverson/timetattle"
-  url "https://github.com/bensyverson/timetattle/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "71ead6cd6d2eb091e55192e8339915f6906271f7a24812318a336854283ffb3e"
+  url "https://github.com/bensyverson/timetattle/archive/refs/tags/v0.2.0.tar.gz"
+  sha256 "cb03e285f640a4837e50c50762649d3d3310ca1c83944ce25a00c2bf5f5a92b5"
   license "MIT"
   head "https://github.com/bensyverson/timetattle.git", branch: "main"
-
-  bottle do
-    root_url "https://github.com/bensyverson/timetattle/releases/download/v0.1.0"
-    sha256 cellar: :any_skip_relocation, arm64_sequoia: "85a0e2ba2738c346f50d0bc731ecdc50d9ad0a275b9925618d779dfb48e79271"
-  end
 
   depends_on "go" => :build
   depends_on macos: :sequoia
