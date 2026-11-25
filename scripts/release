@@ -14,7 +14,9 @@
 #                                              refreshes (space-separated; default: none)
 #     check=make check                         lint and test, run in the repo
 #     bottle=yes                               ship a prebuilt bottle (default: no)
-#     sign=Developer ID Application: … (TEAM)  sign the bottle's code with this identity
+#     sign=Developer ID Application: … (TEAM)  sign the bottle's code with this identity;
+#                                              sign=developer-id uses the keychain's one
+#                                              Developer ID, keeping its name out of the repo
 #     notary_profile=notary                    and notarize it (notarytool store-credentials)
 #
 # With no version it releases what the source already says; with one it bumps the
@@ -77,7 +79,7 @@ while [[ $# -gt 0 ]]; do
             repo="$2"
             shift 2
             ;;
-        -h|--help) sed -n '2,54p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,56p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         -*) die 2 "unknown flag '$1' (try --help)" ;;
         *)
             [[ -z "$target" ]] || die 2 "one version only (got '$target' and '$1')"
@@ -123,6 +125,13 @@ name="${name:-$formula_name}"
 [[ "$bottle" == yes || "$bottle" == no ]] || die 3 "release.conf: bottle must be yes or no (got '${bottle}')"
 [[ -z "$sign" || "$bottle" == yes ]] || die 3 "release.conf: sign= needs bottle=yes; only a bottle is signed"
 [[ -z "$notary_profile" || -n "$sign" ]] || die 3 "release.conf: notary_profile= needs sign=; only signed code is notarized"
+if [[ "$sign" == developer-id ]]; then
+    sign="$(security find-identity -v -p codesigning |
+        sed -n 's/.*"\(Developer ID Application:.*\)"$/\1/p' | sort -u)"
+    [[ -n "$sign" ]] || die 3 "sign=developer-id: the keychain has no Developer ID Application identity"
+    [[ "$sign" != *$'\n'* ]] ||
+        die 3 "sign=developer-id: the keychain has more than one Developer ID Application identity; name one in sign="
+fi
 bottling=false
 [[ "$bottle" == yes ]] && bottling=true
 [[ "$version_line" == *"%s"* ]] || die 3 "release.conf: version_line needs a %s where the version goes"

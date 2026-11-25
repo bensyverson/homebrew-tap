@@ -89,6 +89,15 @@ cat >"${stubs}/xcrun" <<'EOF'
 echo "xcrun $*" >>"$STUB_LOG"
 printf '{"id":"sub-1","status":"%s"}\n' "${STUB_NOTARY_STATUS:-Accepted}"
 EOF
+# security lists the identities STUB_IDENTITIES names, one per line.
+cat >"${stubs}/security" <<'EOS'
+#!/usr/bin/env bash
+echo "security $*" >>"$STUB_LOG"
+i=0
+while IFS= read -r id; do
+    [[ -z "$id" ]] || { i=$((i + 1)); echo "  ${i}) 0000AAAA \"${id}\""; }
+done <<<"${STUB_IDENTITIES-Developer ID Application: Test (TEAM)}"
+EOS
 chmod +x "${stubs}"/*
 export PATH="${stubs}:${PATH}"
 
@@ -161,7 +170,7 @@ EOF
     cp /usr/bin/true "${STUB_PREFIX}/bin/demo"
     unset STUB_SHADOW STUB_OFF_PATH
     unset STUB_CHECK_EXIT STUB_CHECK_WRITES STUB_BREW_INSTALLED STUB_BOTTLE_CELLAR STUB_POURED STUB_GH_RELEASE
-    unset STUB_AUTHORITY STUB_NOTARY_STATUS
+    unset STUB_AUTHORITY STUB_NOTARY_STATUS STUB_IDENTITIES
 }
 
 write_version() {
@@ -643,6 +652,29 @@ setup 0.1.0
 export STUB_AUTHORITY="Apple Development: Someone"
 release 5
 assert_out "Developer ID Application: Test (TEAM)"
+conf_extra=""
+
+case_name="sign=developer-id: signs with the keychain's Developer ID"
+conf_extra=$'bottle=yes\nsign=developer-id\nnotary_profile=demo-notary'
+setup 0.1.0
+export STUB_IDENTITIES=$'Apple Development: Someone (ABC)\nDeveloper ID Application: Test (TEAM)\nDeveloper ID Application: Test (TEAM)'
+release 0
+assert_bottled 0.1.0
+assert_log "codesign --force --options runtime --timestamp --sign Developer ID Application: Test (TEAM) ${STUB_CELLAR}/0.1.0/bin/demo"
+
+case_name="sign=developer-id: no Developer ID stops before anything changes"
+setup 0.1.0
+export STUB_IDENTITIES="Apple Development: Someone (ABC)"
+release 3 0.1.1
+assert_out "Developer ID Application"
+[[ -z "$(remote_tag 0.1.1)" ]] || fail "tagged without an identity"
+
+case_name="sign=developer-id: two different Developer IDs are refused"
+setup 0.1.0
+export STUB_IDENTITIES=$'Developer ID Application: One (AAA)\nDeveloper ID Application: Two (BBB)'
+release 3 0.1.1
+assert_out "more than one"
+[[ -z "$(remote_tag 0.1.1)" ]] || fail "tagged with an ambiguous identity"
 conf_extra=""
 
 case_name="path: a copy earlier on PATH fails the check, naming it"
