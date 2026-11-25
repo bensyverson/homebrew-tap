@@ -6,6 +6,11 @@ class Timetattle < Formula
   license "MIT"
   head "https://github.com/bensyverson/timetattle.git", branch: "main"
 
+  bottle do
+    root_url "https://github.com/bensyverson/timetattle/releases/download/v0.2.0"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "528701219b408daad7f2984d86802d7899da8ab480fec2f616fafa736fda1af6"
+  end
+
   depends_on "go" => :build
   depends_on macos: :sequoia
 
